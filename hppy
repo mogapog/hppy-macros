@@ -1,0 +1,400 @@
+#!/bin/bash
+user=$(whoami)
+functions=$1
+macroname=$2
+macrosdir="/etc/hppymacros"
+hpyversion="0.1.0"
+hpydir="/etc/hppymacros"
+configexist="false"
+hpyuserfile="default"
+i2hasbeenset="false"
+macrofct=$3
+rnmacroerror="0"
+rnmacrofctempt="0"
+smresult="default"
+macrofct2=$4
+scriptpath=${BASH_SOURCE}
+
+if [ -f "/etc/hppymacros/config.hppy" ]
+then
+       configexist="true"
+       hpyuserfile=$(</etc/hppymacros/config.hppy)
+       i2hasbeenset="true"
+fi
+
+
+if [[ $functions = "-i" && $configexist = "false" ]]; then 
+    if [ ! -d "$macrosdir" ]; then
+        sudo mkdir "$macrosdir" &> /dev/null
+        if [ $? -ne 0 ]; then
+            echo "Couldn't create macro directory."
+        else
+            sudo chown $user "$macrosdir" 
+            sudo chmod -R 777 "$macrosdir"
+            sudo mv "./scheduler.py" "/etc/hppymacros"
+            sudo mv "./schedulerbck.py" "/etc/hppymacros"
+            sudo mv "$scriptpath" "/usr/local/bin"
+            echo "Macro directory created."
+        fi
+    fi
+
+    if [[ $configexist == "false" ]]; then
+        sudo touch "/etc/hppymacros/config.hppy" &> /dev/null
+        if [ $? -ne 0 ]; then
+            echo "Couldn't create config file."
+        else
+            sudo chown $user "$hpydir"
+            echo "Config file created."
+            sudo echo "default" > "$macrosdir/config.hppy"
+            exit 0
+        fi
+    fi
+fi
+
+if [[ $functions = "-i" && $configexist = "true" ]]
+then
+	echo "The setup was already completed."
+fi
+
+
+if [[ $functions = "-rm" && $configexist = "true" && $i2hasbeenset = "true" ]]
+then
+	if [[ -z $macroname ]]
+	then
+	echo "Please provide the name of the macro you want to delete."
+	else
+	if [[ -f "$macrosdir/$macroname.hpy" ]]
+	then
+	echo "Deleting macro $macroname..."
+	rm "$macrosdir/$macroname.hpy"
+	sleep 0.5
+	echo "Macro $macroname deleted successfully."
+	else
+	echo "Unknown macro $macroname"
+	fi
+	fi
+fi
+
+if [[ $functions = "-rn" && $configexist = "true" && $i2hasbeenset = "true" ]]
+then
+	if [[ -z $macroname ]]
+	then
+	echo "Enter the macro you want to rename."
+	fi
+
+	if [[ -z $macrofct ]]
+	then
+	echo "Enter the new name for the macro."
+	rnmacrofctempt="1"
+	fi
+
+        if [[ ! -f "$macrosdir/$macroname.hpy" ]]
+        then
+        echo "Unknown macro $macroname."
+        fi
+
+	if [[ -f "$macrosdir/$macroname.hpy" && $rnmacrofctempt = "0" ]]
+	then
+	mv "$macrosdir/$macroname.hpy" "$macrosdir/$macrofct.hpy"
+	if [[ $? -ne 0 ]]; then
+        echo "Couldn't rename the macro."
+	rnmacroerror="1"
+	fi
+	if [[ $rnmacroerror = "0" ]]
+	then
+	echo "Macro renamed successfully."
+	fi
+	fi
+fi
+
+if [[ $functions = "-sm" && $configexist = "true" && $i2hasbeenset = "true" ]]
+then
+	if [[ -f "$macrosdir/$macroname.hpy" && ! -z $macroname ]]
+	then
+	smresult=$(cat "$macrosdir/$macroname.hpy")
+	echo "The macro $macroname contains:"
+	echo "$smresult"
+	else
+	if [[ -z $macroname ]]
+	then
+	echo "Please provide the name of the macro you want to see the contents of."
+	else
+	echo "Unknown macro $macroname"
+	fi
+	fi
+fi
+
+if [[ $functions = "-em" && $configexist = "true" && $i2hasbeenset = "true" ]]; then
+
+    if [[ -z $macroname ]]; then
+        echo "Please provide the name of the macro you want to edit."
+    elif [[ ! -f "$macrosdir/$macroname.hpy" ]]; then
+        echo "Unknown macro $macroname."
+    elif [[ -z $macrofct ]]; then
+        echo "New content of the macro: (Type 'exit' to stop)"
+        newcontent=""
+        while IFS= read -r line; do
+            if [[ $line == "exit" ]]; then
+                break
+            fi
+            newcontent+="$line\n"
+        done
+
+        # Remove trailing newline from newcontent
+        newcontent=${newcontent%$'\n'}
+
+        if [[ $newcontent == "exit" ]]; then
+            echo "Macro $macroname has not been updated."
+        else
+            echo -e "$newcontent" > "$macrosdir/$macroname.hpy"
+            echo "Macro $macroname has been updated."
+        fi
+    elif [[ ! $macrofct =~ ^[0-9]+$ ]]; then
+        echo "Please provide a valid line number for the macro."
+    else
+        echo -n "Enter the new content for macro $macroname at line $macrofct: "
+        read -n 100 newcontent
+
+        sed -i "${macrofct}s/.*/$newcontent/" "$macrosdir/$macroname.hpy"
+        echo "Macro $macroname has been updated at line $macrofct."
+    fi
+fi
+
+
+if [[ $functions = "-ks" && $configexist = "true" && $i2hasbeenset = "true" ]]; then
+    # Find the process ID of the Python script running the schedule
+    if [[ -f "$macrosdir/schedule.log" ]]; then
+    schedulelog=$(cat "$macrosdir/schedule.log")
+    schedulecount=0
+    for line in $schedulelog
+    do
+    schedulecount=$((schedulecount + 1))
+    if [[ $schedulecount = 1 ]]; then
+    pymacroname="$line"
+    fi
+    if [[ $schedulecount = 2 ]]; then
+    pymacrotime="$line"
+    fi
+    if [[ $schedulecount = 3 ]]; then
+    pymacroday="$line"
+    break
+    fi
+    done
+
+    pid=$(pgrep -f "python $macrosdir/scheduler.py -sc $pymacroname $pymacrotime $pymacroday")
+
+    if [ -n "$pid" ]; then
+        # Terminate the process
+        kill "$pid"
+        echo "Schedule stopped."
+        rm "$macrosdir/schedule.log"
+    else 
+        pid=$(pgrep -f "python $macrosdir/schedulerbck.py -scb $pymacroname $pymacrotime $pymacroday")
+            if [ -n "$pid" ]; then
+        # Terminate the process
+        kill "$pid"
+        echo "Schedule stopped."
+        rm "$macrosdir/schedule.log"
+        rm "$macrosdir/bckschedule.log"
+        else
+        echo "Schedule not found."
+            fi
+    fi
+    else
+        echo "Schedule not found."
+   fi
+   echo "$pymacroname $pymacrotime $pymacroday"
+fi
+
+if [[ $functions = "-sc" && $configexist = "true" && $i2hasbeenset = "true" ]]; then
+  # Run the scheduler script with desired arguments
+    if [[ -z $macroname || -z $macrofct ]]; then
+        echo "Insufficient arguments. Use: hppy -scb <name of the macro> <hour of the day> [day of the week (i.e monday)]"
+    elif [[ ! -f "$macrosdir/schedule.log" ]]; then
+        python "$macrosdir/scheduler.py" $functions $macroname $macrofct $macrofct2
+    else
+        if [[ -f "$macrosdir/schedule.log" ]]; then 
+            echo "A schedule is already running. Try closing it. At the moment, the scheduler can only take one schedule at a time."
+        fi
+        if [[ ! -f "$macrosdir/scheduler.py" ]]; then
+            echo "Scheduler file doesn't exist. Try reinstalling."
+        fi
+    fi
+fi
+
+if [[ $functions = "-scb" && $configexist = "true" && $i2hasbeenset = "true" ]]; then
+  # Run the scheduler script with desired arguments
+    if [[ -z $macroname || -z $macrofct ]]; then
+        echo "Insufficient arguments. Use: hppy -scb <name of the macro> <hour of the day> [day of the week (i.e monday)]"
+    elif [[ ! -f "$macrosdir/schedule.log" ]]; then
+        nohup python "$macrosdir/schedulerbck.py" $functions $macroname $macrofct $macrofct2 > "$macrosdir/bckschedule.log" &
+        echo "Running schedule on the background..."   
+    else
+        if [[ -f "$macrosdir/schedule.log" ]]; then 
+            echo "A schedule is already running. Try closing it. At the moment, the scheduler can only take one schedule at a time."
+        fi
+        if [[ ! -f "$macrosdir/schedulerbck.py" ]]; then
+            echo "Scheduler file doesn't exist. Try reinstalling."
+        fi
+    fi
+fi
+
+if [ -z "$functions" ]
+then
+  echo "Hppy version ($hpyversion) running. Run hppy -h for help."
+  exit 0
+fi
+
+case $functions in
+    "-l")
+        # Code for listing macros
+        ;;
+    "-rm")
+        # Code for removing macros
+        ;;
+    "-c")
+        # Code for creating macros
+        ;;
+    "-r")
+        # Code for renaming macros
+        ;;
+    "-i")
+        # Code for function -i
+        ;;
+    "-n")
+        # Code for function n
+        ;;
+   "-sn")
+        # Code for function sn
+        ;;
+    "-h")
+        # Code for function h
+        ;;
+    "-rn")
+        # Code for function -rn
+        ;;
+    "-sm")
+	;;
+    "-em")
+	;;
+    "-ks")
+	;;
+    "-sc")
+	;;
+    "-scb")
+        ;;
+    *)
+        echo "Unknown function: $functions"
+        ;;
+esac
+
+if [[ $functions = "-h" ]]
+then
+  echo "Run -c <macro_name> to create a macro."
+  echo "Run -r <macro_name> to run a macro"
+  echo "Run -n to get your hppy username"
+  echo "Run -sn as root to set your username"
+  echo "Run -i to setup hppy if you haven't."
+  echo "Run -i2 to complete the installation after running -i"
+  echo "Run -rn <macro_name> <new_name> to rename a macro."
+  echo "Run -em <macro_name> [line_number] to edit a macro."
+  echo "Run -sc <macro_name> <hour:minute> [day_of_the_week] to schedule a macro."
+  echo "Run -scb <macro_name> <hour:minute> [day_of_the_week] to schedule a macro to run on the background."
+  echo "Run -ks to kill a schedule thats running on the background."
+  echo "Run -rm <macro_name> to remove a macro."
+  echo "Run -l to list all macros."
+fi
+
+if [[ $functions = "-n" && $configexist = "true" && $i2hasbeenset = "true" ]]
+then
+  echo $hpyuserfile
+fi
+
+if [[ $functions = "-c"  && $configexist = "true" && $i2hasbeenset = "true" ]]
+then
+  if [ -z "$macroname" ]
+  then
+    echo "Please provide a macro name."
+  elif [ -f "$macrosdir/$macroname.hpy" ]
+  then
+    echo "$macroname already exists. Choose another name."
+  else
+    echo "Enter commands for the macro. Type 'exit' to finish."
+    commands=()
+    while true
+    do
+      read -p "Command: " command
+      if [ "$command" = "exit" ]
+      then
+        break
+      fi
+      commands+=("$command")
+    done
+    echo "Macro '$macroname' created with the following commands:"
+    for cmd in "${commands[@]}"
+    do
+      echo "$cmd" >> "$macrosdir/$macroname.hpy"
+    done
+    echo "Macro file '$macroname.hpy' created."
+  fi
+fi
+
+if [[ $functions = "-l" && $configexist = "true" && $i2hasbeenset = "true" ]]
+then
+  echo "Listing all macros:"
+  count=$(ls -1 "$macrosdir"/*.hpy 2>/dev/null | wc -l)
+  
+  if [ $count -eq 0 ]
+  then
+    echo "You have no macros. Create one using -c."
+  else
+    for file in "$macrosdir"/*.hpy
+    do
+      filename=$(basename "$file")
+      echo "${filename%.*}"
+    done
+
+  fi
+fi
+
+
+if [[ $functions = "-r" && $configexist = "true" && $i2hasbeenset = "true" ]]
+then
+  if [ -z "$macroname" ]
+  then
+    echo "Please provide a macro name."
+  else
+    if [ -f "$macrosdir/$macroname.hpy" ]
+    then
+      echo "Running macro '$macroname'..."
+      while read -r cmd
+      do
+        eval "$cmd"
+      done < "$macrosdir/$macroname.hpy"
+    else
+      echo "Unknown macro '$macroname'"
+    fi
+  fi
+fi
+
+if [[ $functions = "-sn" && $configexist = "true" && $i2hasbeenset = "true" ]]
+then
+	sudo cat /dev/null > "/etc/hppymacros/config.hppy"
+        echo "Set your new username"
+	read hpyname
+	sudo echo "$hpyname" >> "/etc/hppymacros/config.hppy"
+	hpyuserfile=$(</etc/hppymacros/config.hppy)
+	if [ -z $hpyuserfile ]
+	then
+	echo "Couldn't set username"
+	else
+	echo "Username set successfully"
+	fi
+fi
+
+
+if [ $configexist = "false" ]
+then
+	echo "Run -i to set up everything first."
+
+fi
