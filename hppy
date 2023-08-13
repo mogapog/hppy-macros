@@ -46,6 +46,7 @@ if [[ $functions = "-i" && $configexist = "false" ]]; then
         else
             sudo chown $user "$hpydir"
             echo "Config file created."
+            sudo chmod -R 777 "$macrosdir/config.hppy"
             sudo echo "default" > "$macrosdir/config.hppy"
             exit 0
         fi
