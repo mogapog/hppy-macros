@@ -33,7 +33,7 @@ if [[ $functions = "-i" && $configexist = "false" ]]; then
             sudo chmod -R 777 "$macrosdir"
             sudo mv "./scheduler.py" "/etc/hppymacros"
             sudo mv "./schedulerbck.py" "/etc/hppymacros"
-            sudo mv "./readme.txt" "/etc/hppymacros"
+            sudo mv "./readme.md" "/etc/hppymacros"
             sudo mv "$scriptpath" "/usr/local/bin"
             echo "Macro directory created."
         fi
