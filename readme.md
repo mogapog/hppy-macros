@@ -21,6 +21,15 @@ The hppy file itself will be located at "/usr/local/bin/"
 
 Right now the hppy project is in a beta phase and a lot of things could and will change. Please report any bugs you find as this will help make the project better.  
 
+The tool works by creating a text file with the commands and running them as bash. You input the commands you want to be stored in a macro, and then you run them all at once.  
+
+You can schedule the macros to run at certain hours of the day, and at certain days of the week if you want to. Currently you can only schedule one macro at a time,  
+and the macro will not keep scheduling if you restart the computer.  
+
+There are _other_ (and better) ways to run multiple commands on the background and schedule them. But if you want, you can run this one. It's lightweight,
+somewhat easy to use and easy to fork.  
+
 Thanks for reading.  
 
 ## Hppy version 0.1.0
+
