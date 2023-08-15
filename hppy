@@ -3,7 +3,7 @@ user=$(whoami)
 functions=$1
 macroname=$2
 macrosdir="/etc/hppymacros"
-hpyversion="0.1.0"
+hpyversion="0.1.1"
 hpydir="/etc/hppymacros"
 configexist="false"
 hpyuserfile="default"
@@ -252,7 +252,7 @@ fi
 
 if [ -z "$functions" ]
 then
-  echo "Hppy version ($hpyversion) running. Run hppy -h for help."
+  echo "Hppy version $hpyversion running. Run hppy -h for help."
   exit 0
 fi
 
