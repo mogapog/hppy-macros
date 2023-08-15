@@ -32,7 +32,6 @@ if [[ $functions = "-i" && $configexist = "false" ]]; then
             sudo chown $user "$macrosdir" 
             sudo chmod -R 777 "$macrosdir"
             sudo mv "./scheduler.py" "/etc/hppymacros"
-            sudo mv "./schedulerbck.py" "/etc/hppymacros"
             sudo mv "./readme.md" "/etc/hppymacros"
             sudo mv "$scriptpath" "/usr/local/bin"
             echo "Macro directory created."
@@ -182,8 +181,13 @@ if [[ $functions = "-ks" && $configexist = "true" && $i2hasbeenset = "true" ]]; 
     break
     fi
     done
+    pymacroname=$(echo "$pymacroname" | sed "s/'//g")
 
-    pid=$(pgrep -f "python $macrosdir/scheduler.py -sc $pymacroname $pymacrotime $pymacroday")
+    if [[ ! -z $pymacroday ]]; then
+    pid=$(pgrep -f "python /etc/hppymacros/scheduler.py -sc $pymacroname $pymacrotime $pymacroday")
+    else
+    pid=$(pgrep -f "python /etc/hppymacros/scheduler.py -sc $pymacroname $pymacrotime")
+    fi
 
     if [ -n "$pid" ]; then
         # Terminate the process
@@ -191,28 +195,33 @@ if [[ $functions = "-ks" && $configexist = "true" && $i2hasbeenset = "true" ]]; 
         echo "Schedule stopped."
         rm "$macrosdir/schedule.log"
     else 
-        pid=$(pgrep -f "python $macrosdir/schedulerbck.py -scb $pymacroname $pymacrotime $pymacroday")
-            if [ -n "$pid" ]; then
-        # Terminate the process
-        kill "$pid"
-        echo "Schedule stopped."
-        rm "$macrosdir/schedule.log"
-        rm "$macrosdir/bckschedule.log"
+        if [[ ! -z $pymacroday ]]; then
+        pid=$(pgrep -f "python /etc/hppymacros/scheduler.py -scb $pymacroname $pymacrotime $pymacroday")
         else
-        echo "Schedule not found."
+        pid=$(pgrep -f "python /etc/hppymacros/scheduler.py -scb $pymacroname $pymacrotime")
+        fi
+
+        if [ -n "$pid" ]; then
+            # Terminate the process
+            kill "$pid"
+            echo "Schedule stopped."
+            rm "$macrosdir/schedule.log"
+            rm "$macrosdir/bckschedule.log"
+        else
+            echo "Schedule not found."
             fi
     fi
     else
         echo "Schedule not found."
    fi
-   echo "$pymacroname $pymacrotime $pymacroday"
+   echo "$pymacroname $pymacrotime $pymacroday $pid"
 fi
 
 if [[ $functions = "-sc" && $configexist = "true" && $i2hasbeenset = "true" ]]; then
   # Run the scheduler script with desired arguments
     if [[ -z $macroname || -z $macrofct ]]; then
         echo "Insufficient arguments. Use: hppy -scb <name of the macro> <hour of the day> [day of the week (i.e monday)]"
-    elif [[ ! -f "$macrosdir/schedule.log" ]]; then
+    elif [[ ! -f "$macrosdir/schedule.log" && -f "$macrosdir/scheduler.py" ]]; then
         python "$macrosdir/scheduler.py" $functions $macroname $macrofct $macrofct2
     else
         if [[ -f "$macrosdir/schedule.log" ]]; then 
@@ -228,14 +237,14 @@ if [[ $functions = "-scb" && $configexist = "true" && $i2hasbeenset = "true" ]];
   # Run the scheduler script with desired arguments
     if [[ -z $macroname || -z $macrofct ]]; then
         echo "Insufficient arguments. Use: hppy -scb <name of the macro> <hour of the day> [day of the week (i.e monday)]"
-    elif [[ ! -f "$macrosdir/schedule.log" ]]; then
-        nohup python "$macrosdir/schedulerbck.py" $functions $macroname $macrofct $macrofct2 > "$macrosdir/bckschedule.log" &
+    elif [[ ! -f "$macrosdir/schedule.log" && -f "$macrosdir/scheduler.py" ]]; then
+        nohup python "$macrosdir/scheduler.py" $functions $macroname $macrofct $macrofct2 > "$macrosdir/bckschedule.log" &
         echo "Running schedule on the background..."   
     else
         if [[ -f "$macrosdir/schedule.log" ]]; then 
             echo "A schedule is already running. Try closing it. At the moment, the scheduler can only take one schedule at a time."
         fi
-        if [[ ! -f "$macrosdir/schedulerbck.py" ]]; then
+        if [[ ! -f "$macrosdir/scheduler.py" ]]; then
             echo "Scheduler file doesn't exist. Try reinstalling."
         fi
     fi
