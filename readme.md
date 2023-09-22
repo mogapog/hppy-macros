@@ -5,7 +5,7 @@ Hppy macros is a linux macroing tool for automatizing linux commands.
 You can schedule a macro to run at certain days of the weeks, and at certain hours.  
 It is an open source project ran by me (the creator) written in bash and python.  
 
-To install it, first download the latest release from [Releases](https://github.com/mogapog/hppy-macros/releases) and unzip it. Then open a terminal in the "/hppyactualinstall/" directory inside the unziped file and then type the following commands:  
+To install it, first download the latest release from [Releases](https://github.com/mogapog/hppy-macros/releases) and unzip it. Then open a terminal in the "/hppyactualinstall/" directory inside the unzipped file and then type the following commands:  
 
 `chmod +x hppy`  
 
