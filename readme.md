@@ -19,9 +19,7 @@ Run `hppy -h` after the installation to see all the commands.
 
 The hppy file itself will be located at "/usr/local/bin/"  
 
-If you are running distros based on ubuntu (e.g linux mint), you may encounter a problem when trying to run the scheduler, something along the lines of this:
-`/usr/local/bin/hppy: line 225: python: command not found`
-To fix this, you will have to run `sudo apt install python-is-python3` on your terminal.
+If you are running distros based on ubuntu (e.g linux mint), you may encounter issues when trying to run the scheduler. We reccomend running `sudo apt install python-is-python3` on your terminal before installing to prevent them.
 
 Right now the hppy project is in a beta phase and a lot of things could and will change. Please report any bugs you find as this will help make the project better.  
 
