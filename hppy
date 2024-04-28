@@ -3,7 +3,7 @@ user=$(whoami)
 functions=$1
 macroname=$2
 macrosdir="/etc/hppymacros"
-hpyversion="0.1.1"
+hpyversion="0.1.2"
 hpydir="/etc/hppymacros"
 configexist="false"
 hpyuserfile="default"
@@ -164,8 +164,8 @@ fi
 
 if [[ $functions = "-ks" && $configexist = "true" && $i2hasbeenset = "true" ]]; then
     # Find the process ID of the Python script running the schedule
-    if [[ -f "$macrosdir/schedule.log" ]]; then
-    schedulelog=$(cat "$macrosdir/schedule.log")
+    if [[ -f "/tmp/schedule.log" ]]; then
+    schedulelog=$(cat "/tmp/schedule.log")
     schedulecount=0
     for line in $schedulelog
     do
@@ -193,7 +193,7 @@ if [[ $functions = "-ks" && $configexist = "true" && $i2hasbeenset = "true" ]]; 
         # Terminate the process
         kill "$pid"
         echo "Schedule stopped."
-        rm "$macrosdir/schedule.log"
+        rm "/tmp/schedule.log"
     else 
         if [[ ! -z $pymacroday ]]; then
         pid=$(pgrep -f "python /etc/hppymacros/scheduler.py -scb $pymacroname $pymacrotime $pymacroday")
@@ -205,8 +205,8 @@ if [[ $functions = "-ks" && $configexist = "true" && $i2hasbeenset = "true" ]]; 
             # Terminate the process
             kill "$pid"
             echo "Schedule stopped."
-            rm "$macrosdir/schedule.log"
-            rm "$macrosdir/bckschedule.log"
+            rm "/tmp/schedule.log"
+            rm "/tmp/bckschedule.log"
         else
             echo "Schedule not found."
             fi
@@ -221,10 +221,10 @@ if [[ $functions = "-sc" && $configexist = "true" && $i2hasbeenset = "true" ]]; 
   # Run the scheduler script with desired arguments
     if [[ -z $macroname || -z $macrofct ]]; then
         echo "Insufficient arguments. Use: hppy -scb <name of the macro> <hour of the day> [day of the week (i.e monday)]"
-    elif [[ ! -f "$macrosdir/schedule.log" && -f "$macrosdir/scheduler.py" ]]; then
+    elif [[ ! -f "/tmp/schedule.log" && -f "$macrosdir/scheduler.py" ]]; then
         python "$macrosdir/scheduler.py" $functions $macroname $macrofct $macrofct2
     else
-        if [[ -f "$macrosdir/schedule.log" ]]; then 
+        if [[ -f "/tmp/schedule.log" ]]; then 
             echo "A schedule is already running. Try closing it. At the moment, the scheduler can only take one schedule at a time."
         fi
         if [[ ! -f "$macrosdir/scheduler.py" ]]; then
@@ -237,11 +237,11 @@ if [[ $functions = "-scb" && $configexist = "true" && $i2hasbeenset = "true" ]];
   # Run the scheduler script with desired arguments
     if [[ -z $macroname || -z $macrofct ]]; then
         echo "Insufficient arguments. Use: hppy -scb <name of the macro> <hour of the day> [day of the week (i.e monday)]"
-    elif [[ ! -f "$macrosdir/schedule.log" && -f "$macrosdir/scheduler.py" ]]; then
-        nohup python "$macrosdir/scheduler.py" $functions $macroname $macrofct $macrofct2 > "$macrosdir/bckschedule.log" &
-        echo "Running schedule on the background..."   
+    elif [[ ! -f "/tmp/schedule.log" && -f "$macrosdir/scheduler.py" ]]; then
+        nohup python "$macrosdir/scheduler.py" $functions $macroname $macrofct $macrofct2 > "/tmp/bckschedule.log" &
+        echo "Running schedule on the background... The command results can be found on /tmp/bckschedule.log"   
     else
-        if [[ -f "$macrosdir/schedule.log" ]]; then 
+        if [[ -f "/tmp/schedule.log" ]]; then 
             echo "A schedule is already running. Try closing it. At the moment, the scheduler can only take one schedule at a time."
         fi
         if [[ ! -f "$macrosdir/scheduler.py" ]]; then

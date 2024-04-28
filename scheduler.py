@@ -35,7 +35,7 @@ def schedule_macro(macroname, macrotime, macroday=None):
             user_input = input()
             if user_input.lower() == "cancel":
                 print("Script canceled.")
-                os.remove('/etc/hppymacros/schedule.log')
+                os.remove('/tmp/schedule.log')
                 return  # Exit the function and return to the command line 
 
         # Reset the flag at the start of a new day
@@ -52,7 +52,7 @@ macroday = sys.argv[4] if len(sys.argv) > 4 else None
 
 if re.match(r'^([01]\d|2[0-3]):([0-5]\d)$', macrotime):
     open('schedule.log', 'w').close()
-    file = open('/etc/hppymacros/schedule.log', 'w')
+    file = open('/tmp/schedule.log', 'w')
     pymacroname = repr(macroname)
     pymacrotime = macrotime
     pymacroday = macroday
