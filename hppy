@@ -13,7 +13,16 @@ rnmacroerror="0"
 rnmacrofctempt="0"
 smresult="default"
 macrofct2=$4
+macrofct3=$5
+pmacrofct3="default"
 scriptpath=${BASH_SOURCE}
+
+if [[ -z $macrofct3 ]]
+then
+    pmacrofct3="Nope"
+else
+    pmacrofct3="$macrofct3"
+fi
 
 if [ -f "/etc/hppymacros/config.hppy" ]
 then
@@ -29,6 +38,7 @@ if [[ $functions = "-i" && $configexist = "false" ]]; then
         if [ $? -ne 0 ]; then
             echo "Couldn't create macro directory."
         else
+            sudo pip install python-crontab
             sudo chown $user "$macrosdir" 
             sudo chmod -R 777 "$macrosdir"
             sudo mv "./scheduler.py" "/etc/hppymacros"
@@ -163,42 +173,31 @@ fi
 
 
 if [[ $functions = "-ks" && $configexist = "true" && $i2hasbeenset = "true" ]]; then
-    # Find the process ID of the Python script running the schedule
-    if [[ -f "/tmp/schedule.log" ]]; then
-    schedulelog=$(cat "/tmp/schedule.log")
-    schedulecount=0
-    for line in $schedulelog
-    do
-    schedulecount=$((schedulecount + 1))
-    if [[ $schedulecount = 1 ]]; then
-    pymacroname="$line"
-    fi
-    if [[ $schedulecount = 2 ]]; then
-    pymacrotime="$line"
-    fi
-    if [[ $schedulecount = 3 ]]; then
-    pymacroday="$line"
-    break
-    fi
-    done
-    pymacroname=$(echo "$pymacroname" | sed "s/'//g")
+    if [ $user = "root" ]; then
+        # Find the process ID of the Python script running the schedule
+        if [[ -f "/tmp/schedule.log" ]]; then
+            schedulelog=$(cat "/tmp/schedule.log")
+            schedulecount=0
+            for line in $schedulelog
+            do
+            schedulecount=$((schedulecount + 1))
+            if [[ $schedulecount = 1 ]]; then
+            pymacroname="$line"
+        fi
+        if [[ $schedulecount = 2 ]]; then
+            pymacrotime="$line"
+        fi
+        if [[ $schedulecount = 3 ]]; then
+            pymacroday="$line"
+        break
+        fi
+        done
+        pymacroname=$(echo "$pymacroname" | sed "s/'//g")
 
-    if [[ ! -z $pymacroday ]]; then
-    pid=$(pgrep -f "python /etc/hppymacros/scheduler.py -sc $pymacroname $pymacrotime $pymacroday")
-    else
-    pid=$(pgrep -f "python /etc/hppymacros/scheduler.py -sc $pymacroname $pymacrotime")
-    fi
-
-    if [ -n "$pid" ]; then
-        # Terminate the process
-        kill "$pid"
-        echo "Schedule stopped."
-        rm "/tmp/schedule.log"
-    else 
         if [[ ! -z $pymacroday ]]; then
-        pid=$(pgrep -f "python /etc/hppymacros/scheduler.py -scb $pymacroname $pymacrotime $pymacroday")
-        else
-        pid=$(pgrep -f "python /etc/hppymacros/scheduler.py -scb $pymacroname $pymacrotime")
+            pid=$(pgrep -f "python3 /etc/hppymacros/scheduler.py -sc $pymacroname $pymacrotime $pymacroday")
+            else
+            pid=$(pgrep -f "python3 /etc/hppymacros/scheduler.py -sc $pymacroname $pymacrotime")
         fi
 
         if [ -n "$pid" ]; then
@@ -206,23 +205,38 @@ if [[ $functions = "-ks" && $configexist = "true" && $i2hasbeenset = "true" ]]; 
             kill "$pid"
             echo "Schedule stopped."
             rm "/tmp/schedule.log"
-            rm "/tmp/bckschedule.log"
+        else 
+            if [[ ! -z $pymacroday ]]; then
+            pid=$(pgrep -f "python3 /etc/hppymacros/scheduler.py -scb $pymacroname $pymacrotime $pymacroday")
+            else
+            pid=$(pgrep -f "python3 /etc/hppymacros/scheduler.py -scb $pymacroname $pymacrotime")
+            fi
+
+            if [ -n "$pid" ]; then
+                # Terminate the process
+                kill "$pid"
+                echo "Schedule stopped."
+                rm "/tmp/schedule.log"
+                rm "/tmp/bckschedule.log"
+            else
+                echo "Schedule not found."
+                fi
+        fi
         else
             echo "Schedule not found."
-            fi
-    fi
+        fi
+        echo "$pymacroname $pymacrotime $pymacroday $pid"
     else
-        echo "Schedule not found."
-   fi
-   echo "$pymacroname $pymacrotime $pymacroday $pid"
+        echo "To kill a schedule, you need root privileges, try running 'sudo' before your command."
+    fi
 fi
 
 if [[ $functions = "-sc" && $configexist = "true" && $i2hasbeenset = "true" ]]; then
   # Run the scheduler script with desired arguments
     if [[ -z $macroname || -z $macrofct ]]; then
-        echo "Insufficient arguments. Use: hppy -scb <name of the macro> <hour of the day> [day of the week (i.e monday)]"
-    elif [[ ! -f "/tmp/schedule.log" && -f "$macrosdir/scheduler.py" ]]; then
-        python "$macrosdir/scheduler.py" $functions $macroname $macrofct $macrofct2
+        echo "Insufficient arguments. Use: hppy -sc <name of the macro> <hour of the day> [day of the week (i.e monday)]"
+    elif [[ ! -f "/tmp/schedule.log" && -f "$macrosdir/scheduler.py"  ]]; then
+        python "$macrosdir/scheduler.py" $functions $macroname $macrofct $macrofct2 $pmacrofct3
     else
         if [[ -f "/tmp/schedule.log" ]]; then 
             echo "A schedule is already running. Try closing it. At the moment, the scheduler can only take one schedule at a time."
@@ -235,18 +249,30 @@ fi
 
 if [[ $functions = "-scb" && $configexist = "true" && $i2hasbeenset = "true" ]]; then
   # Run the scheduler script with desired arguments
-    if [[ -z $macroname || -z $macrofct ]]; then
-        echo "Insufficient arguments. Use: hppy -scb <name of the macro> <hour of the day> [day of the week (i.e monday)]"
-    elif [[ ! -f "/tmp/schedule.log" && -f "$macrosdir/scheduler.py" ]]; then
-        nohup python "$macrosdir/scheduler.py" $functions $macroname $macrofct $macrofct2 > "/tmp/bckschedule.log" &
-        echo "Running schedule on the background... The command results can be found on /tmp/bckschedule.log"   
+    if [ $user = "root" ]; then
+        if [[ -z $macroname || -z $macrofct ]]; then
+            echo "Insufficient arguments. Use: hppy -scb <name of the macro> <hour of the day> [day of the week (i.e monday)]"
+        elif [[ ! -f "/tmp/schedule.log" && -f "$macrosdir/scheduler.py" ]]; then
+            nohup python3 "$macrosdir/scheduler.py" $functions $macroname $macrofct $macrofct2 $pmacrofct3 > "/tmp/bckschedule.log" &
+            echo "Running schedule on the background... The command results can be found on /tmp/bckschedule.log"   
+        else
+            if [[ -f "/tmp/schedule.log" ]]; then 
+                echo "A schedule is already running. Try closing it. At the moment, the scheduler can only take one schedule at a time."
+            fi
+            if [[ ! -f "$macrosdir/scheduler.py" ]]; then
+                echo "Scheduler file doesn't exist. Try reinstalling."
+            fi
+        fi
     else
-        if [[ -f "/tmp/schedule.log" ]]; then 
-            echo "A schedule is already running. Try closing it. At the moment, the scheduler can only take one schedule at a time."
-        fi
-        if [[ ! -f "$macrosdir/scheduler.py" ]]; then
-            echo "Scheduler file doesn't exist. Try reinstalling."
-        fi
+        echo "To run schedules on the background, you need root privileges. Try running 'sudo' before your command."
+    fi
+fi
+
+if [[ $functions = "-kcs" && $configexist = "true" && $i2hasbeenset = "true" ]]; then
+    if [ $user = "root" ]; then
+        python3 "$macrosdir/scheduler.py" $functions $macroname $macrofct $macrofct2
+    else
+        echo "You need root permissions to kill a cron schedule."
     fi
 fi
 
@@ -275,8 +301,9 @@ case $functions in
     "-n")
         # Code for function n
         ;;
+   "-kcs")
+        ;;
    "-sn")
-        # Code for function sn
         ;;
     "-h")
         # Code for function h
