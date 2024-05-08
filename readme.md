@@ -1,5 +1,6 @@
 # Hppy macros
 
+(You are in the `indev` branch, which means that the source code found in here is not release-ready and it's often not working. This branch is use for the sake of logging and commodity)
 
 Hppy macros is a linux macroing tool for automatizing linux commands.  
 You can schedule a macro to run at certain days of the weeks, and at certain hours.  
