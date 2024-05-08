@@ -3,7 +3,7 @@ user=$(whoami)
 functions=$1
 macroname=$2
 macrosdir="/etc/hppymacros"
-hpyversion="0.1.2"
+hpyversion="0.2.0"
 hpydir="/etc/hppymacros"
 configexist="false"
 hpyuserfile="default"
@@ -276,6 +276,19 @@ if [[ $functions = "-kcs" && $configexist = "true" && $i2hasbeenset = "true" ]];
     fi
 fi
 
+if [[ $functions = "-s" && $configexist = "true" && $i2hasbeenset = true ]]; then
+    if [[ -z $macroname ]]; then
+        echo "Insufficient arguments. Use hppy -s <name of the macro> to see its contents."
+    elif [[ -f "$macrosdir/$macroname.hpy" ]]; then
+        echo "Listing contents of the macro:
+        "
+
+        cat "$macrosdir/$macroname.hpy"
+    else 
+        echo "The macro you requested does not exist."
+    fi
+fi
+
 if [ -z "$functions" ]
 then
   echo "Hppy version $hpyversion running. Run hppy -h for help."
@@ -321,6 +334,8 @@ case $functions in
 	;;
     "-scb")
         ;;
+    "-s")
+        ;;
     *)
         echo "Unknown function: $functions"
         ;;
@@ -335,11 +350,14 @@ then
   echo "Run -i to setup hppy if you haven't."
   echo "Run -rn <macro_name> <new_name> to rename a macro."
   echo "Run -em <macro_name> [line_number] to edit a macro."
-  echo "Run -sc <macro_name> <hour:minute> [day_of_the_week] to schedule a macro."
-  echo "Run -scb <macro_name> <hour:minute> [day_of_the_week] to schedule a macro to run on the background."
+  echo "Run -sc <macro_name> <hour:minute> <day_of_the_week> [args] to schedule a macro."
+  echo "Run -scb <macro_name> <hour:minute> <day_of_the_week> [args] to schedule a macro to run on the background."
   echo "Run -ks to kill a schedule thats running on the background."
   echo "Run -rm <macro_name> to remove a macro."
   echo "Run -l to list all macros."
+  echo "Run -s to see the contents of a macro"
+  echo "Run -kcs to delete a cron schedule."
+  echo "Add -pr at the end of your scheduler to make it persistent and write to crontab."
 fi
 
 if [[ $functions = "-n" && $configexist = "true" && $i2hasbeenset = "true" ]]
