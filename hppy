@@ -3,7 +3,7 @@ user=$(whoami)
 functions=$1
 macroname=$2
 macrosdir="/etc/hppymacros"
-hpyversion="0.1.2"
+hpyversion="0.1.3"
 hpydir="/etc/hppymacros"
 configexist="false"
 hpyuserfile="default"
@@ -236,7 +236,7 @@ fi
 if [[ $functions = "-scb" && $configexist = "true" && $i2hasbeenset = "true" ]]; then
   # Run the scheduler script with desired arguments
     if [[ -z $macroname || -z $macrofct ]]; then
-        echo "Insufficient arguments. Use: hppy -scb <name of the macro> <hour of the day> [day of the week (i.e monday)]"
+        echo "Insufficient arguments. Use: hppy -scb <name of the macro> <hour of the day> [day of the week (e.g. Monday)]"
     elif [[ ! -f "/tmp/schedule.log" && -f "$macrosdir/scheduler.py" ]]; then
         nohup python "$macrosdir/scheduler.py" $functions $macroname $macrofct $macrofct2 > "/tmp/bckschedule.log" &
         echo "Running schedule on the background... The command results can be found on /tmp/bckschedule.log"   
@@ -247,6 +247,19 @@ if [[ $functions = "-scb" && $configexist = "true" && $i2hasbeenset = "true" ]];
         if [[ ! -f "$macrosdir/scheduler.py" ]]; then
             echo "Scheduler file doesn't exist. Try reinstalling."
         fi
+    fi
+fi
+
+if [[ $functions = "-s" && $configexist = "true" && $i2hasbeenset = true ]]; then
+    if [[ -z $macroname ]]; then
+        echo "Insufficient arguments. Use hppy -s <name of the macro> to see its contents."
+    elif [[ -f "$macrosdir/$macroname.hpy" ]]; then
+        echo "Listing contents of the macro:
+        "
+
+        cat "$macrosdir/$macroname.hpy"
+    else 
+        echo "The macro you requested does not exist."
     fi
 fi
 
@@ -294,6 +307,8 @@ case $functions in
 	;;
     "-scb")
         ;;
+    "-s")
+        ;;
     *)
         echo "Unknown function: $functions"
         ;;
@@ -313,6 +328,7 @@ then
   echo "Run -ks to kill a schedule thats running on the background."
   echo "Run -rm <macro_name> to remove a macro."
   echo "Run -l to list all macros."
+  echo "Run -s <macro_name> to see the contents of a macro."
 fi
 
 if [[ $functions = "-n" && $configexist = "true" && $i2hasbeenset = "true" ]]
